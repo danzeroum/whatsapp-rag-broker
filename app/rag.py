@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 from pathlib import Path
+
 import chromadb
 from chromadb.utils import embedding_functions
 
@@ -24,7 +25,6 @@ def _get_collection():
 def ingest_documents() -> None:
     """
     Lê arquivos .txt e .md da pasta DOCS_PATH, divide em chunks e indexa no ChromaDB.
-    Para PDFs, adicionar: from pypdf import PdfReader
     """
     collection = _get_collection()
     chunks, ids, metadatas = [], [], []
@@ -34,7 +34,6 @@ def ingest_documents() -> None:
             continue
 
         content = file_path.read_text(encoding="utf-8")
-        # Chunking simples por parágrafo (extensível para RecursiveCharacterTextSplitter)
         paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
 
         for i, para in enumerate(paragraphs):
@@ -53,7 +52,6 @@ def ingest_documents() -> None:
 def retrieve(query: str, top_k: int = 3) -> list[dict]:
     """
     Busca os top_k chunks mais relevantes para a query.
-    Retorna lista com texto e metadados da fonte.
     """
     collection = _get_collection()
     results = collection.query(query_texts=[query], n_results=top_k)

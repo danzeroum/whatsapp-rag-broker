@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 import httpx
 
 GRAPH_API_URL = "https://graph.facebook.com/v20.0"
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 async def send_text_message(phone_number_id: str, to: str, text: str) -> dict:
     """
     Envia uma mensagem de texto via WhatsApp Cloud API (Meta).
-    Documentação: https://developers.facebook.com/docs/whatsapp/cloud-api/messages
     """
     url = f"{GRAPH_API_URL}/{phone_number_id}/messages"
     headers = {

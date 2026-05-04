@@ -1,10 +1,6 @@
 # =============================================================================
 # GitHub Actions CI/CD — whatsapp-rag-broker
 # Stages: lint → test → build → security → deploy
-#
-# Secrets: configure em Settings → Secrets and variables → Actions
-#   META_VERIFY_TOKEN, META_APP_SECRET, META_ACCESS_TOKEN, OPENAI_API_KEY
-#   GHCR usa GITHUB_TOKEN automático (sem configuração extra)
 # =============================================================================
 
 name: CI/CD Pipeline
@@ -24,8 +20,9 @@ jobs:
 
   # ===========================================================================
   # JOB: lint
-  # Ruff: linting + verificação de formatação.
-  # Bloqueia o PR se houver violações.
+  # Ruff check (erros de código) + format (aplica formatação e commita).
+  # O step de format usa `--check` apenas para validar; em PRs externos
+  # o developer deve rodar `ruff format .` localmente antes de abrir PR.
   # ===========================================================================
   lint:
     name: Lint (Ruff)
@@ -43,17 +40,22 @@ jobs:
       - name: Install Ruff
         run: pip install ruff
 
-      - name: Check lint
+      - name: Check lint (erros de código)
         run: ruff check app/ tests/
 
-      - name: Check formatting
-        run: ruff format --check app/ tests/
+      # Aplica a formatação e faz auto-commit se houver alterações.
+      # Em PRs de fora do repo, apenas verifica sem commitar.
+      - name: Format code (auto-fix)
+        run: ruff format app/ tests/
+
+      - name: Commit formatting changes (se houver)
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format by ruff [skip ci]"
+          file_pattern: "app/**/*.py tests/**/*.py"
 
   # ===========================================================================
   # JOB: test
-  # pytest com cobertura. Redis roda como service container.
-  # O relatório coverage.xml é enviado ao GitHub como artefato
-  # e pode ser integrado ao Codecov (gratuito para repos públicos).
   # ===========================================================================
   test:
     name: Unit Tests (pytest-cov)
@@ -75,7 +77,6 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       CHROMA_PATH: ./test_chroma_data
       DOCS_PATH: ./data/docs
-      # Valores fictícios para testes — sem segredos reais aqui
       META_VERIFY_TOKEN: test_verify_token
       META_APP_SECRET: test_app_secret
       META_ACCESS_TOKEN: test_access_token
@@ -108,18 +109,8 @@ jobs:
           path: coverage.xml
           retention-days: 7
 
-      # Opcional: integração com Codecov (gratuito para repos públicos)
-      # - name: Upload to Codecov
-      #   uses: codecov/codecov-action@v4
-      #   with:
-      #     file: coverage.xml
-      #     fail_ci_if_error: false
-
   # ===========================================================================
   # JOB: build
-  # Docker Buildx com cache via GitHub Actions Cache.
-  # Push para o GitHub Container Registry (GHCR) — gratuito para repos públicos.
-  # Roda apenas em push para main e em tags.
   # ===========================================================================
   build:
     name: Build & Push Docker Image
@@ -129,7 +120,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write  # Necessário para push no GHCR
+      packages: write
 
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -149,7 +140,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Gera tags automáticas: latest, sha-<short>, v1.0.0 (se for tag)
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -170,26 +160,22 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache de camadas entre pipelines (reduz tempo de build)
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # ===========================================================================
   # JOB: security
-  # Trivy escaneia a imagem por vulnerabilidades HIGH e CRITICAL.
-  # Gera relatório SARIF integrado ao GitHub Security tab (aba nativa do GitHub).
-  # allow_failure equivalente: continue-on-error: true
   # ===========================================================================
   security:
     name: Security Scan (Trivy)
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
-    continue-on-error: true  # Alerta, mas não bloqueia. Remova em produção.
+    continue-on-error: true
 
     permissions:
       contents: read
-      security-events: write  # Necessário para upload do SARIF
+      security-events: write
 
     steps:
       - name: Checkout
@@ -209,9 +195,8 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
-          exit-code: "0"  # Mude para "1" em produção para bloquear o pipeline
+          exit-code: "0"
 
-      # Envia resultado para a aba "Security" do GitHub (Code scanning alerts)
       - name: Upload Trivy SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -224,33 +209,5 @@ jobs:
           path: trivy-results.sarif
           retention-days: 30
 
-  # ===========================================================================
-  # JOB: deploy (esqueleto — expandir para AWS ECS / Kubernetes)
-  # Descomente quando o ambiente estiver pronto.
-  # Secrets necessários: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-  # ===========================================================================
-
-  # deploy:
-  #   name: Deploy to AWS ECS
-  #   runs-on: ubuntu-latest
-  #   needs: security
-  #   if: startsWith(github.ref, 'refs/tags/v')  # Deploy apenas em tags versionadas
-  #   environment:
-  #     name: production
-  #     url: https://api.meudominio.com
-  #
-  #   steps:
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-1
-  #
-  #     - name: Force new ECS deployment
-  #       run: |
-  #         aws ecs update-service \
-  #           --cluster whatsapp-rag-cluster \
-  #           --service whatsapp-rag-service \
-  #           --force-new-deployment \
-  #           --region us-east-1
+  # deploy: (esqueleto — descomente quando o ambiente estiver pronto)
+  # ver versão completa no .gitlab-ci.yml

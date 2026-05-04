@@ -1,7 +1,8 @@
-import os
-import hmac
 import hashlib
-from fastapi import Request, HTTPException
+import hmac
+import os
+
+from fastapi import HTTPException, Request
 
 APP_SECRET = os.getenv("META_APP_SECRET", "minha_chave_secreta_meta")
 
@@ -9,8 +10,6 @@ APP_SECRET = os.getenv("META_APP_SECRET", "minha_chave_secreta_meta")
 async def verify_signature(request: Request) -> bool:
     """
     Valida a assinatura HMAC-SHA256 enviada pela Meta no header X-Hub-Signature-256.
-    Impede que requisições forjadas cheguem ao processamento.
-    Padrão obrigatório para integrações corporativas com a Cloud API.
     """
     signature_header = request.headers.get("X-Hub-Signature-256")
 
@@ -30,7 +29,6 @@ async def verify_signature(request: Request) -> bool:
         digestmod=hashlib.sha256,
     ).hexdigest()
 
-    # compare_digest previne timing attacks
     if not hmac.compare_digest(expected, signature):
         raise HTTPException(status_code=403, detail="Assinatura inválida — requisição rejeitada.")
 

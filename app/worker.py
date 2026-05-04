@@ -1,7 +1,9 @@
-import os
 import asyncio
 import logging
+import os
+
 from openai import AsyncOpenAI
+
 from app.broker import consume_message
 from app.rag import retrieve
 from app.whatsapp_client import send_text_message
@@ -18,23 +20,18 @@ openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 async def generate_response(question: str, context_chunks: list[dict]) -> str:
     """
     Gera resposta com LLM usando o contexto recuperado pelo RAG.
-    Cada resposta é fundamentada em documentos reais — rastreável e auditável.
     """
     context_text = "\n\n".join(
         f"[Fonte: {c['source']} | Chunk {c['chunk']}]\n{c['text']}" for c in context_chunks
     )
 
-    prompt = f"""Você é um assistente especializado. Responda a pergunta do usuário \
-baseando-se EXCLUSIVAMENTE no contexto abaixo. Se a informação não estiver no contexto, \
-diga que não possui essa informação.
-
-## Contexto
-{context_text}
-
-## Pergunta
-{question}
-
-## Resposta"""
+    prompt = (
+        "Você é um assistente especializado. Responda a pergunta do usuário "
+        "baseando-se EXCLUSIVAMENTE no contexto abaixo. Se a informação não estiver no contexto, "
+        "diga que não possui essa informação.\n\n"
+        f"## Contexto\n{context_text}\n\n"
+        f"## Pergunta\n{question}\n\n## Resposta"
+    )
 
     response = await openai_client.chat.completions.create(
         model=LLM_MODEL,
@@ -53,15 +50,12 @@ async def process_event(event: dict) -> None:
 
     logger.info(f"[worker] Processando msg {msg_id} de {phone}")
 
-    # 1. RAG: recupera chunks relevantes
     chunks = retrieve(text, top_k=3)
     logger.info(f"[worker] {len(chunks)} chunks recuperados para a query.")
 
-    # 2. LLM: gera resposta fundamentada
     answer = await generate_response(text, chunks)
     logger.info(f"[worker] Resposta gerada: {answer[:80]}...")
 
-    # 3. WhatsApp: envia resposta ao usuário
     await send_text_message(phone_number_id, phone, answer)
     logger.info(f"[worker] Resposta enviada para {phone}.")
 
@@ -69,7 +63,6 @@ async def process_event(event: dict) -> None:
 async def run_worker() -> None:
     """
     Loop principal do worker: consome eventos da fila e processa continuamente.
-    Em produção, isso seria uma AWS Lambda acionada por SQS trigger.
     """
     logger.info("[worker] Worker iniciado. Aguardando mensagens na fila...")
     while True:

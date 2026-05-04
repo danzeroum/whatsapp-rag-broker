@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class TestRetrieve:
@@ -14,6 +14,7 @@ class TestRetrieve:
         mock_get_col.return_value = mock_col
 
         from app.rag import retrieve
+
         results = retrieve("taxa de juros", top_k=2)
 
         assert len(results) == 2
@@ -30,5 +31,6 @@ class TestRetrieve:
         mock_get_col.return_value = mock_col
 
         from app.rag import retrieve
+
         results = retrieve("pergunta sem resposta")
         assert results == []

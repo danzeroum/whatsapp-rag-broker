@@ -1,9 +1,11 @@
-import os
 import logging
-from fastapi import FastAPI, Request, HTTPException, Depends
+import os
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse
-from app.security import verify_signature
+
 from app.broker import publish_message
+from app.security import verify_signature
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)

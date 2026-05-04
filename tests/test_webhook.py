@@ -1,9 +1,11 @@
-import hmac
 import hashlib
+import hmac
 import json
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch
+
 from app.main import app
 
 TEST_SECRET = "test_secret"
@@ -66,19 +68,25 @@ class TestWebhookReceive:
     @patch("app.main.publish_message", new_callable=AsyncMock)
     def test_valid_message_returns_200(self, mock_publish):
         payload = {
-            "entry": [{
-                "changes": [{
-                    "value": {
-                        "metadata": {"phone_number_id": "123456"},
-                        "messages": [{
-                            "id": "wamid.abc",
-                            "from": "5511999999999",
-                            "type": "text",
-                            "text": {"body": "Qual a taxa de juros?"},
-                        }],
-                    }
-                }]
-            }]
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "metadata": {"phone_number_id": "123456"},
+                                "messages": [
+                                    {
+                                        "id": "wamid.abc",
+                                        "from": "5511999999999",
+                                        "type": "text",
+                                        "text": {"body": "Qual a taxa de juros?"},
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
         }
         body = json.dumps(payload).encode()
         sig = make_signature(body, TEST_SECRET)
