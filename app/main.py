@@ -1,5 +1,4 @@
 import os
-import asyncio
 import logging
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import PlainTextResponse
@@ -51,13 +50,12 @@ async def receive_message(request: Request):
             for change in entry.get("changes", []):
                 value = change.get("value", {})
 
-                # Ignora status de entrega (read, delivered) — foca só em mensagens reais
                 if "messages" not in value:
                     continue
 
                 for msg in value["messages"]:
                     if msg.get("type") != "text":
-                        continue  # Extensível para áudio, imagem etc.
+                        continue
 
                     event = {
                         "msg_id": msg.get("id"),
@@ -67,12 +65,9 @@ async def receive_message(request: Request):
                     }
 
                     logger.info(f"[{event['msg_id']}] Mensagem de {event['phone']}: {event['text']}")
-
-                    # Publica na fila — desacopla recebimento do processamento
                     await publish_message(event)
 
     except Exception as exc:
         logger.exception(f"Erro ao processar payload: {exc}")
 
-    # Meta exige 200 OK imediato — não bloquear aqui
     return {"status": "ok"}
