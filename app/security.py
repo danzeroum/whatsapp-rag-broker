@@ -4,13 +4,16 @@ import os
 
 from fastapi import HTTPException, Request
 
-APP_SECRET = os.getenv("META_APP_SECRET", "minha_chave_secreta_meta")
-
 
 async def verify_signature(request: Request) -> bool:
     """
     Valida a assinatura HMAC-SHA256 enviada pela Meta no header X-Hub-Signature-256.
+    APP_SECRET é lido em tempo de execução para que monkeypatch funcione nos testes
+    e para que rotação de segredos em produção (AWS Secrets Manager) seja possível
+    sem reiniciar o processo.
     """
+    app_secret = os.getenv("META_APP_SECRET", "minha_chave_secreta_meta")
+
     signature_header = request.headers.get("X-Hub-Signature-256")
 
     if not signature_header:
@@ -24,7 +27,7 @@ async def verify_signature(request: Request) -> bool:
     body = await request.body()
 
     expected = hmac.new(
-        key=APP_SECRET.encode("utf-8"),
+        key=app_secret.encode("utf-8"),
         msg=body,
         digestmod=hashlib.sha256,
     ).hexdigest()
