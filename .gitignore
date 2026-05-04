@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Env
+.env
+*.env
+
+# ChromaDB
+data/chroma_db/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+*.log
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/

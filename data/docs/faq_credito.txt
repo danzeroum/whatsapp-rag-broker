@@ -1,0 +1,16 @@
+# FAQ - Política de Crédito
+
+## O que é o limite de crédito?
+O limite de crédito é o valor máximo disponível para o cliente utilizar em compras e serviços. Ele é definido com base na análise de renda, histórico de pagamentos e perfil financeiro do cliente.
+
+## Como solicitar aumento de limite?
+O cliente pode solicitar aumento de limite pelo aplicativo, website ou central de atendimento. A análise leva até 2 dias úteis e considera o histórico recente de pagamentos, a renda declarada atualizada e o tempo de relacionamento com a empresa.
+
+## Qual a taxa de juros do crédito rotativo?
+A taxa de juros do crédito rotativo é de 12,5% ao mês para clientes regulares e 9,8% ao mês para clientes premium (com relacionamento acima de 24 meses). Os juros incidem sobre o saldo devedor quando o pagamento mínimo é realizado.
+
+## O que acontece em caso de inadimplência?
+Em caso de inadimplência superior a 30 dias, o cliente tem seu limite suspenso automaticamente. Após 90 dias, o débito pode ser negativado nos órgãos de proteção ao crédito (SPC/Serasa). A regularização pode ser feita pelo aplicativo com opções de parcelamento.
+
+## Como funciona o parcelamento de fatura?
+O cliente pode parcelar o saldo devedor em até 24 vezes com taxa de 3,5% ao mês. O parcelamento pode ser solicitado antes do vencimento da fatura e o valor mínimo de parcela é R$ 50,00.

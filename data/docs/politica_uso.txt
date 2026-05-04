@@ -1,0 +1,16 @@
+# Política de Uso do Assistente Digital
+
+## Sobre o assistente
+Este assistente digital foi desenvolvido para auxiliar clientes com dúvidas sobre produtos financeiros, limites, faturas e serviços relacionados. Ele utiliza Inteligência Artificial com RAG (Retrieval-Augmented Generation) para fornecer respostas baseadas em documentos oficiais da empresa.
+
+## O que o assistente pode responder
+O assistente é capaz de responder perguntas sobre: limites de crédito, taxas de juros vigentes, política de parcelamento, procedimentos para regularização de débitos e informações gerais sobre produtos.
+
+## O que o assistente não pode fazer
+O assistente não realiza operações financeiras diretamente, não tem acesso a dados pessoais do cliente em tempo real e não pode alterar limites ou renegociar dívidas. Para operações, o cliente deve ser direcionado ao aplicativo ou atendimento humano.
+
+## Privacidade e segurança
+Nenhuma informação sensível como senhas, números de cartão completos ou dados de autenticação deve ser enviada pelo chat. O assistente não solicita esse tipo de dado e todas as conversas são registradas para fins de melhoria do serviço conforme a LGPD.
+
+## Horário de atendimento
+O assistente digital está disponível 24 horas por dia, 7 dias por semana. Em caso de dúvidas complexas ou emergências, o atendimento humano está disponível de segunda a sexta-feira, das 8h às 22h, e aos sábados, das 9h às 18h.
