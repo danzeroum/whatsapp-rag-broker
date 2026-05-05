@@ -8,19 +8,40 @@ from app.broker import consume_message
 from app.rag import retrieve
 from app.whatsapp_client import send_text_message
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+
+def _build_llm_client() -> AsyncOpenAI:
+    """
+    Constrói o cliente LLM com base na variável LLM_PROVIDER.
+    - "deepseek": usa a API compatível com OpenAI da DeepSeek
+    - "openai" (padrão): usa a API oficial da OpenAI
+    """
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    if provider == "deepseek":
+        return AsyncOpenAI(
+            api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+            base_url="https://api.deepseek.com",
+        )
+    return AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+
+
+def _default_model() -> str:
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    if provider == "deepseek":
+        return "deepseek-chat"
+    return "gpt-4o-mini"
 
 
 async def generate_response(question: str, context_chunks: list[dict]) -> str:
     """
     Gera resposta com LLM usando o contexto recuperado pelo RAG.
+    O cliente é instanciado em tempo de execução para respeitar monkeypatch nos testes.
     """
+    client = _build_llm_client()
+    model = os.getenv("LLM_MODEL", _default_model())
+
     context_text = "\n\n".join(
         f"[Fonte: {c['source']} | Chunk {c['chunk']}]\n{c['text']}" for c in context_chunks
     )
@@ -33,8 +54,8 @@ async def generate_response(question: str, context_chunks: list[dict]) -> str:
         f"## Pergunta\n{question}\n\n## Resposta"
     )
 
-    response = await openai_client.chat.completions.create(
-        model=LLM_MODEL,
+    response = await client.chat.completions.create(
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=512,

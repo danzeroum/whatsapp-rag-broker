@@ -8,17 +8,29 @@ from chromadb.utils import embedding_functions
 DOCS_PATH = Path(os.getenv("DOCS_PATH", "data/docs"))
 CHROMA_PATH = os.getenv("CHROMA_PATH", "data/chroma_db")
 COLLECTION_NAME = "knowledge_base"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 logger = logging.getLogger(__name__)
 
 
 def _get_collection():
+    """
+    Retorna a coleção ChromaDB usando a função de embedding adequada ao provider.
+
+    - openai  : OpenAIEmbeddingFunction com text-embedding-3-small
+    - deepseek: DefaultEmbeddingFunction (sentence-transformers local, gratuito)
+      O DeepSeek não oferece API de embeddings; usar modelo local é a prática recomendada.
+    """
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
     client = chromadb.PersistentClient(path=CHROMA_PATH)
-    emb_fn = embedding_functions.OpenAIEmbeddingFunction(
-        api_key=OPENAI_API_KEY,
-        model_name="text-embedding-3-small",
-    )
+
+    if provider == "deepseek":
+        emb_fn = embedding_functions.DefaultEmbeddingFunction()
+    else:
+        emb_fn = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY", ""),
+            model_name="text-embedding-3-small",
+        )
+
     return client.get_or_create_collection(COLLECTION_NAME, embedding_function=emb_fn)
 
 
