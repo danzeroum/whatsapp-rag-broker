@@ -1,6 +1,6 @@
 """Testes do worker: ciclo completo RAG + LLM + envio WhatsApp."""
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from app.worker import process_event
 
@@ -41,7 +41,6 @@ async def test_process_event_no_rag_context():
 
         mock_rag.assert_called_once_with("qual o horário?", top_k=3)
         mock_llm.assert_awaited_once()
-        # Verifica que a resposta de fallback foi enviada
         args = mock_send.await_args[0]
         assert "Não possuo" in args[2]
 
@@ -67,7 +66,6 @@ async def test_process_event_does_not_raise_on_send_failure():
          patch("app.worker.generate_response", new_callable=AsyncMock, return_value="ok"), \
          patch("app.worker.send_text_message", new_callable=AsyncMock, side_effect=Exception("API down")):
 
-        # Não deve lançar excessão — o loop do worker não pode parar
         try:
             await process_event(BASE_EVENT)
         except Exception:
