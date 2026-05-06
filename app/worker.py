@@ -5,7 +5,7 @@ import os
 from openai import AsyncOpenAI
 
 from app.broker import consume_message
-from app.rag import retrieve
+from app.rag import ingest_documents, retrieve
 from app.whatsapp_client import send_text_message
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -13,11 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 def _build_llm_client() -> AsyncOpenAI:
-    """
-    Constrói o cliente LLM com base na variável LLM_PROVIDER.
-    - "deepseek": usa a API compatível com OpenAI da DeepSeek
-    - "openai" (padrão): usa a API oficial da OpenAI
-    """
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
     if provider == "deepseek":
         return AsyncOpenAI(
@@ -29,16 +24,10 @@ def _build_llm_client() -> AsyncOpenAI:
 
 def _default_model() -> str:
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
-    if provider == "deepseek":
-        return "deepseek-chat"
-    return "gpt-4o-mini"
+    return "deepseek-chat" if provider == "deepseek" else "gpt-4o-mini"
 
 
 async def generate_response(question: str, context_chunks: list[dict]) -> str:
-    """
-    Gera resposta com LLM usando o contexto recuperado pelo RAG.
-    O cliente é instanciado em tempo de execução para respeitar monkeypatch nos testes.
-    """
     client = _build_llm_client()
     model = os.getenv("LLM_MODEL", _default_model())
 
@@ -71,7 +60,7 @@ async def process_event(event: dict) -> None:
 
     separator = "=" * 60
     logger.info(separator)
-    logger.info(f"[worker] NOVA MENSAGEM RECEBIDA")
+    logger.info("[worker] NOVA MENSAGEM RECEBIDA")
     logger.info(f"[worker]   msg_id  : {msg_id}")
     logger.info(f"[worker]   de      : {phone}")
     logger.info(f"[worker]   texto   : {text}")
@@ -85,7 +74,7 @@ async def process_event(event: dict) -> None:
     answer = await generate_response(text, chunks)
 
     logger.info(separator)
-    logger.info(f"[worker] RESPOSTA GERADA")
+    logger.info("[worker] RESPOSTA GERADA")
     logger.info(f"[worker]   para    : {phone}")
     logger.info(f"[worker]   resposta: {answer}")
     logger.info(separator)
@@ -95,10 +84,9 @@ async def process_event(event: dict) -> None:
 
 
 async def run_worker() -> None:
-    """
-    Loop principal do worker: consome eventos da fila e processa continuamente.
-    """
-    logger.info("[worker] Worker iniciado. Aguardando mensagens na fila...")
+    logger.info("[worker] Worker iniciado. Indexando documentos...")
+    ingest_documents()
+    logger.info("[worker] Indexação concluída. Aguardando mensagens na fila...")
     while True:
         event = await consume_message()
         if event:
