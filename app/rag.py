@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import chromadb
+from chromadb.config import Settings
 from chromadb.utils import embedding_functions
 
 DOCS_PATH = Path(os.getenv("DOCS_PATH", "data/docs"))
@@ -10,6 +11,14 @@ CHROMA_PATH = os.getenv("CHROMA_PATH", "data/chroma_db")
 COLLECTION_NAME = "knowledge_base"
 
 logger = logging.getLogger(__name__)
+
+
+def _get_client():
+    """Retorna o cliente ChromaDB com telemetria desabilitada."""
+    return chromadb.PersistentClient(
+        path=CHROMA_PATH,
+        settings=Settings(anonymized_telemetry=False),
+    )
 
 
 def _get_collection():
@@ -21,7 +30,7 @@ def _get_collection():
       O DeepSeek não oferece API de embeddings; usar modelo local é a prática recomendada.
     """
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
-    client = chromadb.PersistentClient(path=CHROMA_PATH)
+    client = _get_client()
 
     if provider == "deepseek":
         emb_fn = embedding_functions.DefaultEmbeddingFunction()
