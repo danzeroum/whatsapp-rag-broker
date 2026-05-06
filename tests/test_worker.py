@@ -60,13 +60,33 @@ async def test_process_event_passes_correct_phone_number_id():
 
 
 @pytest.mark.asyncio
-async def test_process_event_does_not_raise_on_send_failure():
-    """Falha no envio ao WhatsApp não deve derrubar o worker."""
-    with patch("app.worker.retrieve", return_value=[]), \
-         patch("app.worker.generate_response", new_callable=AsyncMock, return_value="ok"), \
-         patch("app.worker.send_text_message", new_callable=AsyncMock, side_effect=Exception("API down")):
+async def test_run_worker_isolates_exception_per_event():
+    """
+    run_worker() envolve process_event() em try/except —
+    uma falha em um evento não deve derrubar o loop.
+    O tratamento de resiliência está no run_worker, não no process_event.
+    """
+    import asyncio
+    from app.worker import run_worker
 
-        try:
-            await process_event(BASE_EVENT)
-        except Exception:
-            pytest.fail("process_event() não deve propagar exceções do send_text_message")
+    call_count = 0
+
+    async def fake_consume():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return BASE_EVENT
+        # Encerra o loop após 2 chamadas
+        raise asyncio.CancelledError()
+
+    with patch("app.worker.ingest_documents"), \
+         patch("app.worker.consume_message", side_effect=fake_consume), \
+         patch("app.worker.retrieve", return_value=[]), \
+         patch("app.worker.generate_response", new_callable=AsyncMock, side_effect=Exception("LLM down")), \
+         patch("app.worker.send_text_message", new_callable=AsyncMock):
+
+        with pytest.raises(asyncio.CancelledError):
+            await run_worker()
+
+        # Se chegou aqui, o loop não foi derrubado pela excessão do evento 1
+        assert call_count == 2
