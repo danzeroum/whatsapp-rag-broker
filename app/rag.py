@@ -12,6 +12,10 @@ COLLECTION_NAME = "knowledge_base"
 
 logger = logging.getLogger(__name__)
 
+# Modelo multilingual — suporta PT-BR, EN e +100 idiomas
+# Substitui o all-MiniLM-L6-v2 que é fraco para português
+MULTILINGUAL_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
+
 
 def _get_client():
     """Retorna o cliente ChromaDB com telemetria desabilitada."""
@@ -21,33 +25,51 @@ def _get_client():
     )
 
 
-def _get_collection():
+def _get_embedding_fn():
     """
-    Retorna a coleção ChromaDB usando a função de embedding adequada ao provider.
+    Retorna a função de embedding adequada ao provider.
 
     - openai  : OpenAIEmbeddingFunction com text-embedding-3-small
-    - deepseek: DefaultEmbeddingFunction (sentence-transformers local, gratuito)
+    - deepseek: SentenceTransformerEmbeddingFunction multilingual (local, gratuito)
       O DeepSeek não oferece API de embeddings; usar modelo local é a prática recomendada.
+      paraphrase-multilingual-MiniLM-L12-v2 suporta PT-BR e +100 idiomas.
     """
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
-    client = _get_client()
 
     if provider == "deepseek":
-        emb_fn = embedding_functions.DefaultEmbeddingFunction()
-    else:
-        emb_fn = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY", ""),
-            model_name="text-embedding-3-small",
+        return embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name=MULTILINGUAL_MODEL
         )
 
+    return embedding_functions.OpenAIEmbeddingFunction(
+        api_key=os.getenv("OPENAI_API_KEY", ""),
+        model_name="text-embedding-3-small",
+    )
+
+
+def _get_collection():
+    client = _get_client()
+    emb_fn = _get_embedding_fn()
     return client.get_or_create_collection(COLLECTION_NAME, embedding_function=emb_fn)
 
 
 def ingest_documents() -> None:
     """
     Lê arquivos .txt e .md da pasta DOCS_PATH, divide em chunks e indexa no ChromaDB.
+    Apaga a coleção anterior para garantir que os embeddings sejam recriados com o modelo correto.
     """
-    collection = _get_collection()
+    client = _get_client()
+    emb_fn = _get_embedding_fn()
+
+    # Recria a coleção para evitar conflito com embeddings do modelo anterior
+    try:
+        client.delete_collection(COLLECTION_NAME)
+        logger.info("[rag] Coleção anterior removida para reindexação limpa.")
+    except Exception:
+        pass
+
+    collection = client.create_collection(COLLECTION_NAME, embedding_function=emb_fn)
+
     chunks, ids, metadatas = [], [], []
 
     for file_path in DOCS_PATH.glob("**/*"):
