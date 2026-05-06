@@ -69,16 +69,29 @@ async def process_event(event: dict) -> None:
     text = event["text"]
     phone_number_id = event["phone_number_id"]
 
-    logger.info(f"[worker] Processando msg {msg_id} de {phone}")
+    separator = "=" * 60
+    logger.info(separator)
+    logger.info(f"[worker] NOVA MENSAGEM RECEBIDA")
+    logger.info(f"[worker]   msg_id  : {msg_id}")
+    logger.info(f"[worker]   de      : {phone}")
+    logger.info(f"[worker]   texto   : {text}")
+    logger.info(separator)
 
     chunks = retrieve(text, top_k=3)
     logger.info(f"[worker] {len(chunks)} chunks recuperados para a query.")
+    for i, chunk in enumerate(chunks):
+        logger.info(f"[worker]   chunk[{i}] fonte={chunk.get('source')} | {chunk.get('text', '')[:100]}...")
 
     answer = await generate_response(text, chunks)
-    logger.info(f"[worker] Resposta gerada: {answer[:80]}...")
+
+    logger.info(separator)
+    logger.info(f"[worker] RESPOSTA GERADA")
+    logger.info(f"[worker]   para    : {phone}")
+    logger.info(f"[worker]   resposta: {answer}")
+    logger.info(separator)
 
     await send_text_message(phone_number_id, phone, answer)
-    logger.info(f"[worker] Resposta enviada para {phone}.")
+    logger.info(f"[worker] Mensagem enviada para {phone} com sucesso.")
 
 
 async def run_worker() -> None:
